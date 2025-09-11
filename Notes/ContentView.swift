@@ -14,9 +14,11 @@ struct ContentView: View {
 
     @FetchRequest(
         sortDescriptors: [NSSortDescriptor(keyPath: \Item.timestamp, ascending: false)],
+        predicate: NSPredicate(format: "content != nil AND content != ''"), // ⬅️ filter empty notes
         animation: .default
     )
     private var items: FetchedResults<Item>
+
 
     var body: some View {
         NavigationView {
