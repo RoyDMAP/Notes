@@ -84,8 +84,7 @@ struct NoteDetailView: View {
             editedContent = item.content ?? ""
         }
     }
-    
-    // MARK: - Edit actions
+ 
     private func startEditing() {
         editedContent = item.content ?? ""
         isEditing = true

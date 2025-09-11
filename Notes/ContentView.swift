@@ -29,7 +29,6 @@ struct ContentView: View {
                         .padding(.top)
                 }
 
-                // Input field + Add button
                 HStack {
                     TextField("Enter new note", text: $newNoteText)
                         .textFieldStyle(RoundedBorderTextFieldStyle())
@@ -44,7 +43,6 @@ struct ContentView: View {
                 }
                 .padding()
 
-                // Notes list
                 List(items) { item in
                     NavigationLink(destination: NoteDetailView(item: item)) {
                         VStack(alignment: .leading, spacing: 4) {
@@ -90,8 +88,6 @@ struct ContentView: View {
         }
     }
 
-    // MARK: - Core Data actions
-
     private func addItem() {
         let trimmedText = newNoteText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmedText.isEmpty else { return }
@@ -134,7 +130,6 @@ struct ContentView: View {
     }
 }
 
-// MARK: - Date formatter
 private let itemFormatter: DateFormatter = {
     let formatter = DateFormatter()
     formatter.dateStyle = .short
