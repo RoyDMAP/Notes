@@ -6,25 +6,27 @@
 //
 
 import CoreData
+import Foundation
 
 struct PersistenceController {
     static let shared = PersistenceController()
 
-    @MainActor
-    static let preview: PersistenceController = {
+    static var preview: PersistenceController = {
         let result = PersistenceController(inMemory: true)
         let viewContext = result.container.viewContext
-        for _ in 0..<10 {
+        
+        // Add sample data for previews
+        for i in 0..<3 {
             let newItem = Item(context: viewContext)
             newItem.timestamp = Date()
+            newItem.content = "Sample note \(i + 1)"
         }
+        
         do {
             try viewContext.save()
+            print("✅ Preview data saved successfully")
         } catch {
-            // Replace this implementation with code to handle the error appropriately.
-            // fatalError() causes the application to generate a crash log and terminate. You should not use this function in a shipping application, although it may be useful during development.
-            let nsError = error as NSError
-            fatalError("Unresolved error \(nsError), \(nsError.userInfo)")
+            print("❌ Preview data save failed: \(error)")
         }
         return result
     }()
@@ -32,26 +34,77 @@ struct PersistenceController {
     let container: NSPersistentContainer
 
     init(inMemory: Bool = false) {
-        container = NSPersistentContainer(name: "Notes")
+        // Try to find the Core Data model
+        let modelNames = ["DataModel", "Model", "Notes", "NotesApp", "CoreData"]
+        var foundContainer: NSPersistentContainer?
+        
+        for modelName in modelNames {
+            if let modelURL = Bundle.main.url(forResource: modelName, withExtension: "momd") {
+                if let model = NSManagedObjectModel(contentsOf: modelURL) {
+                    print("✅ Found Core Data model: \(modelName)")
+                    foundContainer = NSPersistentContainer(name: modelName, managedObjectModel: model)
+                    break
+                }
+            }
+        }
+        
+        if foundContainer == nil {
+            print("⚠️ No Core Data model found in bundle, using fallback: DataModel")
+            container = NSPersistentContainer(name: "DataModel")
+        } else {
+            container = foundContainer!
+        }
+        
         if inMemory {
             container.persistentStoreDescriptions.first!.url = URL(fileURLWithPath: "/dev/null")
+            print("🧪 Using in-memory store for testing")
+        } else {
+            // Print where the database will be stored
+            if let storeURL = container.persistentStoreDescriptions.first?.url {
+                print("💾 Database location: \(storeURL)")
+            }
         }
+        
+        // Configure store options for better reliability
+        let storeDescription = container.persistentStoreDescriptions.first!
+        storeDescription.shouldMigrateStoreAutomatically = true
+        storeDescription.shouldInferMappingModelAutomatically = true
+        
         container.loadPersistentStores(completionHandler: { (storeDescription, error) in
             if let error = error as NSError? {
-                // Replace this implementation with code to handle the error appropriately.
-                // fatalError() causes the application to generate a crash log and terminate. You should not use this function in a shipping application, although it may be useful during development.
-
-                /*
-                 Typical reasons for an error here include:
-                 * The parent directory does not exist, cannot be created, or disallows writing.
-                 * The persistent store is not accessible, due to permissions or data protection when the device is locked.
-                 * The device is out of space.
-                 * The store could not be migrated to the current model version.
-                 Check the error message to determine what the actual problem was.
-                 */
-                fatalError("Unresolved error \(error), \(error.userInfo)")
+                print("❌ Core Data store loading failed: \(error), \(error.userInfo)")
+                // In a real app, you might want to handle this more gracefully
+                fatalError("Unresolved Core Data error \(error), \(error.userInfo)")
+            } else {
+                print("✅ Core Data store loaded successfully")
+                if let url = storeDescription.url {
+                    print("📁 Store URL: \(url)")
+                }
             }
         })
+        
+        // Enable automatic merging
         container.viewContext.automaticallyMergesChangesFromParent = true
+        
+        // Set merge policy to handle conflicts
+        container.viewContext.mergePolicy = NSMergeByPropertyObjectTrumpMergePolicy
+    }
+    
+    // Convenience method to save context
+    func save() {
+        let context = container.viewContext
+        
+        if context.hasChanges {
+            do {
+                try context.save()
+                print("✅ Core Data context saved successfully")
+            } catch {
+                print("❌ Core Data save error: \(error)")
+                let nsError = error as NSError
+                print("Error details: \(nsError), \(nsError.userInfo)")
+            }
+        } else {
+            print("ℹ️ No changes to save")
+        }
     }
 }
